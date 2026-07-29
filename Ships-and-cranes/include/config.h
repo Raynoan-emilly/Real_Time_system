@@ -61,8 +61,8 @@
 #define LED_RED_PIN                      21
 
 #define BTN_TRIGGER_STRESS_PIN           4
-#define BTN_FORCE_RELIEF_PIN             5
-#define BTN_RESET_NORMAL_PIN             12
+#define BTN_FORCE_RELIEF_PIN             12
+#define BTN_RESET_NORMAL_PIN             5
 #define BUTTON_DEBOUNCE_MS               180
 
 // Prioridades das tarefas
