@@ -1,6 +1,4 @@
-# Sistema Portuário com FreeRTOS
-
-Projeto desenvolvido em ESP32 para simular o gerenciamento de uma doca.
+# Sistema de Docas
 
 O sistema controla:
 
