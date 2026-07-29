@@ -1,40 +1,108 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/queue.h>
-#include <stdlib.h>
+#include <esp_system.h>
 
 #include "system_handler.h"
 #include "config.h"
 #include "types.h"
 
+static QueueHandle_t queue_for_priority(ShipPriority_t priority) {
+    switch (priority) {
+        case SHIP_PRIORITY_HIGH:
+            return xQueueShipsHigh;
+        case SHIP_PRIORITY_NORMAL:
+            return xQueueShipsNormal;
+        case SHIP_PRIORITY_LOW:
+        default:
+            return xQueueShipsLow;
+    }
+}
+
+static const char *priority_name(ShipPriority_t priority) {
+    switch (priority) {
+        case SHIP_PRIORITY_HIGH:
+            return "ALTA";
+        case SHIP_PRIORITY_NORMAL:
+            return "NORMAL";
+        case SHIP_PRIORITY_LOW:
+        default:
+            return "BAIXA";
+    }
+}
+
 void vTaskGenerator(void *pvParameters) {
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    (void)pvParameters;
+
     uint32_t ship_id = 1;
+    vTaskDelay(pdMS_TO_TICKS(1000));
 
     for (;;) {
-        Ship_t *new_ship = (Ship_t *)malloc(sizeof(Ship_t));
-        if (new_ship != NULL) {
-            new_ship->id = ship_id++;
-            new_ship->total_containers = 50;
-            new_ship->remaining_containers = 50;
+        Ship_t ship = {0};
 
-            new_ship->count_hazmat = rand() % 6;
-            new_ship->count_reefer = (rand() % 10) + 5;
-            new_ship->count_standard = new_ship->total_containers - 
-                                      (new_ship->count_hazmat + new_ship->count_reefer);
+        uint32_t random_value = esp_random();
+        uint16_t range =
+            SHIP_MAX_CONTAINERS -
+            SHIP_MIN_CONTAINERS +
+            1;
 
-            if (xQueueSend(xQueueShipsArrival, &new_ship, 0) == pdPASS) {
-                UBaseType_t ships_in_queue = uxQueueMessagesWaiting(xQueueShipsArrival);
-                UBaseType_t berths_free = uxSemaphoreGetCount(xBerthSemaphore);
+        ship.id = ship_id++;
+        ship.total_containers =
+            SHIP_MIN_CONTAINERS +
+            (uint16_t)(random_value % range);
+        ship.remaining_containers = ship.total_containers;
 
-                log_msg("[MARÍTIMO] Navio #%u atracou/ancorou. [Docas Livres: %u/10 | Fila no Mar: %u Navios]", 
-                        new_ship->id, berths_free, ships_in_queue);
-            } else {
-                free(new_ship);
-            }
+        ship.count_hazmat =
+            (uint16_t)(esp_random() % 5);
+
+        ship.count_reefer =
+            (uint16_t)(3 + (esp_random() % 9));
+
+        if (ship.count_hazmat + ship.count_reefer >
+            ship.total_containers) {
+            ship.count_reefer =
+                ship.total_containers -
+                ship.count_hazmat;
         }
 
-        // Navios chegam a cada 3.5s para forçar acúmulo no mar quando o cais travar
-        vTaskDelay(pdMS_TO_TICKS(3500));
+        ship.count_standard =
+            ship.total_containers -
+            ship.count_hazmat -
+            ship.count_reefer;
+
+        uint8_t priority_draw =
+            (uint8_t)(esp_random() % 100);
+
+        if (ship.count_hazmat > 0 || priority_draw < 20) {
+            ship.priority = SHIP_PRIORITY_HIGH;
+        } else if (priority_draw < 65) {
+            ship.priority = SHIP_PRIORITY_NORMAL;
+        } else {
+            ship.priority = SHIP_PRIORITY_LOW;
+        }
+
+        ship.arrival_tick = xTaskGetTickCount();
+
+        QueueHandle_t destination =
+            queue_for_priority(ship.priority);
+
+        if (xQueueSend(destination, &ship, 0) == pdPASS) {
+            log_msg(
+                "[MAR] Navio #%u chegou: %u conteineres, prioridade %s.",
+                ship.id,
+                ship.total_containers,
+                priority_name(ship.priority)
+            );
+        } else {
+            log_msg(
+                "[MAR] Navio #%u recusado: fila %s cheia.",
+                ship.id,
+                priority_name(ship.priority)
+            );
+        }
+
+        vTaskDelay(
+            pdMS_TO_TICKS(SHIP_ARRIVAL_INTERVAL_MS)
+        );
     }
 }

@@ -4,28 +4,50 @@
 
 #include "system_handler.h"
 #include "types.h"
-#include "yard.h"
-
-QueueHandle_t xQueueYardTrucks = NULL;
+#include "config.h"
 
 void vTaskTrucks(void *pvParameters) {
+    (void)pvParameters;
+
     uint32_t truck_id = 1;
 
     for (;;) {
-        Truck_t main_truck = { .id = truck_id++, .is_loaded = 0 };
-        Truck_t yard_truck = { .id = truck_id++, .is_loaded = 0 };
+        SystemMode_t mode = g_system_mode;
 
-        // Envia caminhões para o cais e para o pátio
-        xQueueSend(xQueueTrucksArrival, &main_truck, 0);
+        uint32_t interval_ms = TRUCK_INTERVAL_NORMAL_MS;
+        uint8_t batch = 1;
 
-        if (xQueueYardTrucks != NULL) {
-            xQueueSend(xQueueYardTrucks, &yard_truck, 0);
+        if (mode == SYSTEM_MODE_STRESS) {
+            interval_ms = TRUCK_INTERVAL_STRESS_MS;
+        } else if (mode == SYSTEM_MODE_RELIEF) {
+            interval_ms = TRUCK_INTERVAL_RELIEF_MS;
+            batch = 2;
         }
 
-        // Se o pátio passar de 50 contêineres, acelera a chegada na portaria para 150ms!
-        uint16_t yard_count = yard_get_count();
-        uint32_t delay_ms = (yard_count > 50) ? 150 : 400;
+        for (uint8_t i = 0; i < batch; i++) {
+            Truck_t direct_truck = {
+                .id = truck_id++,
+                .is_loaded = 0
+            };
 
-        vTaskDelay(pdMS_TO_TICKS(delay_ms));
+            Truck_t yard_truck = {
+                .id = truck_id++,
+                .is_loaded = 0
+            };
+
+            xQueueSend(
+                xQueueDirectTrucks,
+                &direct_truck,
+                0
+            );
+
+            xQueueSend(
+                xQueueYardTrucks,
+                &yard_truck,
+                0
+            );
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(interval_ms));
     }
 }

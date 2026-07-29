@@ -16,4 +16,4 @@ uint16_t yard_get_count(void);
 }
 #endif
 
-#endif // YARD_H
+#endif

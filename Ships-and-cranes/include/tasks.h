@@ -10,10 +10,10 @@ void vTaskCranes(void *pvParameters);
 void vTaskTrucks(void *pvParameters);
 void vTaskDashboard(void *pvParameters);
 void vTaskLogger(void *pvParameters);
-void vTaskButtons(void *pvParameters); 
+void vTaskButtons(void *pvParameters);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // TASKS_H
+#endif

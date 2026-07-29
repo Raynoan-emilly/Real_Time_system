@@ -9,11 +9,14 @@ extern "C" {
 #endif
 
 void hardware_init(void);
-void hardware_update_status_leds(uint8_t ships_waiting, uint16_t yard_count);
-void send_button_command_from_isr(CraneCommand_t cmd);
+void hardware_update_status_leds(
+    uint16_t ships_waiting,
+    uint16_t yard_count,
+    SystemMode_t mode
+);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // HARDWARE_H
+#endif
