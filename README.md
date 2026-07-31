@@ -40,3 +40,6 @@ O projeto utiliza recursos do FreeRTOS, como tarefas, filas, mutex e semáforos.
 5. abra o monitor serial em `115200 baud`.
 
 O monitor serial mostra o estado das docas, do pátio, dos navios e dos caminhões.
+
+## Link do video 
+https://youtu.be/-LAcc64w0q0
